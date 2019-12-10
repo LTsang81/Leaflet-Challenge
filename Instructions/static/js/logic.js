@@ -1,7 +1,7 @@
 // Creating map object
 const mymap = L.map("map", {
-    center: [40.7128, -74.0059],
-    zoom: 11
+    center: [19.4438324, -155.2231598],
+    zoom: 3
 });
 
 // Adding tile layer
@@ -10,66 +10,81 @@ var lightmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/light-v9/til
     maxZoom: 18,
     id: "mapbox.light",
     accessToken: API_KEY
-});
+}).addTo(mymap);
 
-(async function () {
-    // Link to GeoJSON
-    const APILink = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
-    const data = await d3.json(APILink);
-
-    // Create a new choropleth layer
-    const geojson = L.colorMarker(data, {
-
-        // Define what  property in the features to use
-        valueProperty: "mag",
-
-        // Set color scale
-        scale: ["#ffffb2", "#b10026"],
-
-        // Number of breaks in step range
-        steps: 10,
-
-        // q for quartile, e for equidistant, k for k-means
-        mode: "q",
-        style: {
-            // Border color
-            color: "#fff",
-            weight: 1,
-            fillOpacity: 0.8
-        },
-
-        // Binding a pop-up to each layer
-        onEachFeature: function (feature, layer) {
-            const popupMsg = feature.properties.mag
-            layer.bindPopup(popupMsg);
+    // Function that will determine the color 
+    function chooseColor(mag) {
+        if (mag> 5.0) {
+            return "red"
         }
-    }).addTo(mymap);
 
-    // Set up the legend
-    const legend = L.control({ position: "bottomright" });
-    legend.onAdd = function () {
-        const div = L.DomUtil.create("div", "info legend");
-        const limits = geojson.options.limits;
-        const colors = geojson.options.colors;
+        if (mag > 4.0) {
+            return "orange"
+        }
 
-        // Add min & max
-        const legendInfo = "<h1>Median Income</h1>" +
-            "<div class=\"labels\">" +
-            "<div class=\"min\">" + limits[0] + "</div>" +
-            "<div class=\"max\">" + limits[limits.length - 1] + "</div>" +
-            "</div>";
+        if (mag> 3.0) {
+            return "yellow"
+        }
 
-        div.innerHTML = legendInfo;
+        if (mag > 2.0) {
+            return "blue"
+        }
+        return "green"
+    }
+    function markerSize(magnitude) {
+        return magnitude *4;
+    }
+function MarkerOptions(feature) {
+    return {
+        radius: markerSize(feature.properties.mag),
+        fillColor: chooseColor(feature.properties.mag),
+        color: "white",
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+    }
+};
 
-        const labels = limits.map((limit, index) => {
-            return "<li style=\"background-color: " + colors[index] + "\"></li>"
-        })
+//const markers = L.circleMarkers(+features.properties.mag, {
+    //fillOpacity: 0.75,
+    //color: "white",
+    //fillColor: chooseColor(+features.properties.mag),
+    // Setting our circle's radius equal to the output of our markerSize function
+    // This will make our marker's size proportionate to its population
+    //radius: markerSize(features.properties.mag)
+//})
 
-        div.innerHTML += "<ul>" + labels.join("") + "</ul>";
-        return div;
-    };
+    (async function () {
+    // Link to GeoJSON
+        const APILink = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
+        const data = await d3.json(APILink);
+        console.log(data)
+        L.geoJSON(data.features, {
+            pointToLayer: function (feature, latlng) {
+                return L.circleMarker(latlng);
+            },
+            style: MarkerOptions, 
+            onEachFeature: function (feature, layer) {
+                layer.bindPopup("<h1>Magnitude" + feature.properties.mag + "</h1> <hr> <h3>Coordinates: " + feature.properties.place + "</h3>")
+            }
+        }).addTo(mymap);
+    })()
 
-    // Adding legend to the map
-    legend.addTo(myMap);
-})()
 
+
+ //}).bindPopup("<h1>Magnitude" + properties.mag + "</h1> <hr> <h3>Coordinates: " + geometry.coordinates + "</h3>")
+
+    // (async function () {
+    //     const response = await d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson");
+    //     const markers = L.markerClusterGroup();
+    //     response.forEach(data => {
+    //         const location = data.location;
+    //         if (location) {
+    //             const coord = [location.coordinates[1], location.coordinates[0]]
+    //             const descriptor = data.descriptor
+    //             markers.addLayer(L.cirlcemarker(coordinates).bindPopup(descriptor))
+    //         }
+    //     })
+    //     // Add our marker cluster layer to the map
+    //     myMap.addLayer(markers);
+    // })()
